@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Карта Яндекс</title>
+</head>
+<body>
+    <div id="map"></div>
+    <script>
+        function createYandexMap(address) {
+            var url = 'https://yandex.ru/maps/?q=' + encodeURIComponent(address);
+            var mapUrl = 'https://yandex.ru/map-widget/v1/?mode=search&text=' + encodeURIComponent(address);
+            var html = '<div style="position:relative;overflow:hidden;">';
+            html += '<a href="' + url + '" style="color:#eee;font-size:12px;position:absolute;top:0px;">' + address + '</a>';
+            html += '<iframe src="' + mapUrl + '" width="560" height="400" frameborder="1" allowfullscreen="true" style="position:relative;"></iframe>';
+            html += '</div>';
+            return html;
+        }
+
+        // Пример использования функции
+        var address = '{{address}}';
+        var mapHtml = createYandexMap(address);
+        document.getElementById('map').innerHTML = mapHtml;
+    </script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <h1>Мероприятие {{data.title}}</h1>
+    <h2>пройдёт {{data.date}} в {{data.time}}</h2>
+    <h3>в {{data.locality}} по адресу {{data.location}}</h3>
+    <input type="submit"  name="open" value="Купить билеты">
+{% endblock %}

@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Авторизация по электронной почте</title>
+  </head>
+  <body>
+    <h1>Авторизация по электронной почте</h1>
+    <h3>После того, как Вы укажите почту, Вы будете возвращены на страницу выбора билетов. event_id={{go_to_event_id}}</h3>
+    <form>
+      <label for="email">Электронная почта:</label>
+      <input type="email" id="email" name="email" required>
+      <input type="hidden" name="event_id" value="{{go_to_event_id}}">
+      <button type="submit" value="{{go_to_event_id}}">Войти</button>
+    </form>
+  </body>
+</html>

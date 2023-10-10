@@ -1,0 +1,113 @@
+<!doctype html>
+{% block content %}
+                        <html>
+                            <head>
+                                <meta charset='utf-8'>
+                                <meta name='viewport' content='width=device-width, initial-scale=1'>
+                                <title>Корзина • Театр Гамма</title>
+                                                                <link rel="icon" type="image/x-icon" href="/static/img/fav.png">
+                                <link href='https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css' rel='stylesheet'>
+                                <link href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css' rel='stylesheet'>
+                                <script type='text/javascript' src='https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js'></script>
+                                <style>::-webkit-scrollbar {
+                                  width: 8px;
+                                }
+                                /* Track */
+                                ::-webkit-scrollbar-track {
+                                  background: #f1f1f1; 
+                                }
+                                 
+                                /* Handle */
+                                ::-webkit-scrollbar-thumb {
+                                  background: #888; 
+                                }
+                                
+                                /* Handle on hover */
+                                ::-webkit-scrollbar-thumb:hover {
+                                  background: #555; 
+                                } @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@200&display=swap');
+
+body {
+  font-family: 'Manrope', sans-serif;
+  background:#eee;
+}
+
+.size span {
+  font-size: 11px;
+}
+
+.color span {
+  font-size: 11px;
+}
+
+.product-deta {
+  margin-right: 70px;
+}
+
+.gift-card:focus {
+  box-shadow: none;
+}
+
+.pay-button {
+  color: #fff;
+}
+
+.pay-button:hover {
+  color: #fff;
+}
+
+.pay-button:focus {
+  color: #fff;
+  box-shadow: none;
+}
+
+.text-grey {
+  color: #a39f9f;
+}
+
+.qty i {
+  font-size: 11px;
+}</style>
+                                </head>
+                                <body className='snippet-body'>
+                                <div class="container mt-5 mb-5">
+            <div class="d-flex justify-content-center row">
+                <div class="col-md-8">
+                    <div class="p-2">
+                        <h4>Корзина</h4>
+                    </div>
+                    {% for row in data %}
+                        <div class="d-flex flex-row justify-content-between align-items-center p-2 bg-white mt-4 px-3 rounded">
+                            <div class="mr-1"><img class="rounded" src="/static/img/afisha.png" width="70"></div>
+                            <div class="d-flex flex-column align-items-center product-details"><span class="font-weight-bold">{{row[0]}}</span>
+                                <div class="d-flex flex-row product-desc">
+                                    <div class="size mr-1"><span class="text-grey">Ряд:</span><span class="font-weight-bold">&nbsp;{{row[1]}}</span></div>
+                                    <div class="color"><span class="text-grey">Место:</span><span class="font-weight-bold">&nbsp;{{row[2]}}</span></div>
+                                </div>
+                            </div>
+                            <div class="d-flex flex-row align-items-center qty">
+                                <h5 class="text-grey mt-1 mr-1 ml-1">{{row[3]}}</h5></div>
+                            <div>
+                                <h5 class="text-grey">{{row[4]}}</h5>
+                            </div>
+                            <div class="d-flex align-items-center"><i class="fa fa-trash mb-1 text-danger"></i></div>
+                        </div>
+                    {% endfor %}
+                    <div class="d-flex flex-row align-items-center mt-3 p-2 bg-white rounded"><input type="text" class="form-control border-0 gift-card" placeholder="Промокод"><button class="btn btn-outline-warning btn-sm ml-2" type="button">Применить</button></div>
+                    <div class="d-flex flex-row align-items-center mt-3 p-2 bg-white rounded"><button class="btn btn-warning btn-block btn-lg ml-2 pay-button" type="button" onclick="window.location.href='/payment'">Перейти к оплате</button></div>
+                </div>
+            </div>
+        </div>
+                                <script type='text/javascript' src='https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.bundle.min.js'></script>
+                                <script type='text/javascript' src='#'></script>
+                                <script type='text/javascript' src='#'></script>
+                                <script type='text/javascript' src='#'></script>
+                                <script type='text/javascript'>#</script>
+                                <script type='text/javascript'>var myLink = document.querySelector('a[href="#"]');
+                                myLink.addEventListener('click', function(e) {
+                                  e.preventDefault();
+                                });</script>
+                            
+                                </body>
+                            </html>
+{% endblock %}

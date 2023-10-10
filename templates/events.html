@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <h1>Мероприятия</h1>
+    <br>
+    <table>
+    <thead>
+    <th>id</th><th>Название</th><th>Населённый пункт</th><th>Локация</th><th>Дата</th><th>Время</th><th>Длина зала(кол-во рядов)</th><th>Ширина</th>
+    </thead>
+      <tbody>
+      {% for el in data %}
+          <div>
+              <samp>
+                <form action="/order" method="post">
+                <tr><td>{{el.id}} </td><td>{{el.title}}</td><td>{{el.locality}}</td><td>{{el.location}}</td><td>{{el.date}}</td><td>{{el.time}}</td><td>{{el.hall_length}}</td><td>{{el.hall_width}}</td><td><input type="submit"  name="open" value="Редактировать"></tr>
+                </form>
+             </samp>
+          </div>
+      {% endfor %}
+      </tbody>
+    </table>
+{% endblock %}

@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<form method="post" novalidate>
+    <h1>Мероприятие {{event.title}}</h1>
+    <h2>схема зала</h2>
+    <h3 style="color: red">Внимание! Бронь действительна 20 минут, далее она обнуляется!</h3>
+    <table>
+        <tbody>
+        {% for row in data %}
+            <tr><td>ряд {{row[0][0][0]}}</td>
+            {% for place in row %}
+            <td><button name="button" style="{{place[1][0]}}" value="n_{{place[0][0]}}_{{place[0][1]}}" {{place[1][1]}}>{{place[0][1]}}</button></td>
+            {% endfor %}
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <br>
+    Условные обозначения:
+    <table>
+        <tbody>
+        <tr><td><button name="example" style="background-color: yellow" disabled>Х</button> </td><td>место забронировано</td>
+        <tr><td><button name="example" style="background-color: red" disabled>Х</button> </td><td>место занято</td>
+        <tr><td><button name="example" disabled>Х</button> </td><td>место свободно</td>
+        </tbody>
+    </table>
+    <h3>Пользователь {{user}} <a href="/logout" title="Выйти">Выйти</a></h3>
+    <h3>В корзине {{basket[0]}} билет(a) на сумму {{basket[1]}}₽ <a href="/basket" title="Оплата">Перейти к оплате</a></h3>
+</form>
+{% endblock %}
