@@ -3,9 +3,12 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import AnonymousUserMixin, UserMixin, LoginManager, login_user, current_user, logout_user, login_required
 import os
 from jinja2 import Template
+import hashlib
+import requests
 
 
 from flask_forms import *
+from private_info import *
 
 file_path = os.path.abspath(os.getcwd())
 
@@ -14,6 +17,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{file_path}/db/events.db'
 app.config['SECRET_KEY'] = 'helen_secret_key'
 login_manager = LoginManager(app)
 db = SQLAlchemy(app)
+payments_url = "https://securepay.tinkoff.ru/v2/Init"
 
 @login_manager.user_loader
 def load_user(email):
@@ -40,6 +44,18 @@ class Hall(db.Model):
     place = db.Column(db.Text)
     status = db.Column(db.Text)
     reserver = db.Column(db.Text)
+
+
+class Order(db.Model):
+    __tablename__ = 'orders'
+
+    id = db.Column(db.Integer, primary_key=True)
+    amount = db.Column(db.Text)
+    status = db.Column(db.Text)
+    reserver = db.Column(db.Text)
+    event_id = db.Column(db.Integer)
+    places = db.Column(db.Text)
+
 
 class User(UserMixin, db.Model):
     __tablename__ = 'users'
@@ -98,6 +114,20 @@ def generate_ticket(event):
         file.write(rendered_template)
 
     return f'<a href="/ticket/{name}">Место {event.place}</a>'
+
+
+def get_data_of_current_user():
+    tickets_data = Hall.query.filter_by(reserver=current_user.email).all()
+    print(tickets_data)
+    data = []
+    for el in tickets_data:
+        event_data = Event.query.filter_by(id=el.id).all()[0]
+        print(event_data)
+        place = el.place.split('_')
+        data.append(
+            [f'{event_data.title} в {event_data.locality}', place[1], place[2], event_data.location, event_data.date, event_data.id, event_data.price])
+    print(data)
+    return data
 
 
 @app.route('/')
@@ -174,13 +204,7 @@ def eventid(id):
 @app.route('/basket')
 @login_required
 def basket():
-    tickets_data = Hall.query.filter_by(reserver=current_user.email).all()
-    print(tickets_data)
-    data = []
-    for el in tickets_data:
-        event_data = Event.query.filter_by(id=el.id).all()[0]
-        place = el.place.split('_')
-        data.append([f'{event_data.title} в {event_data.locality}', place[1], place[2], event_data.location, event_data.date])
+    data = get_data_of_current_user()
     return render_template('basket.html', data=data)
 
 @app.route('/afisha')
@@ -195,7 +219,45 @@ def map(address):
 
 @app.route('/payment')
 def payment():
-    return '<center><h3>Страница обработки платежа</h3><br><h4>После успешной оплаты(<a href="/success">подтвердить оплату</a>) пользователь будет попадать на страницу с билетами и доп. информацией</h4><br><a href="/">Вернуться на главную</a></center>'
+    data = get_data_of_current_user()
+    amount = 0
+    places = ''
+    for el in data:
+        amount += el[-1]
+        places += f'{el[1]}_{el[2]} '
+    id = int(data[0][-2])
+    amount = amount * 100
+    order = Order(amount=amount, status="new", reserver=current_user.email, event_id=id, places=places)
+    db.session.add(order)
+    db.session.commit()
+    oid = Order.query.filter_by(amount=amount, status="new", reserver=current_user.email, event_id=id, places=places).all()[0].id
+    print(oid)
+    r = {
+        "TerminalKey": tinkoff_terminalkey,
+        "Amount": amount,
+        "OrderId": oid,
+        "Password": tinkoff_password,
+        "Success URL": "http://127.0.0.1:5000/success",
+        "Fail URL": "http://127.0.0.1:5000/fail",
+        "Description": f"Оплата билетов. {data[0][0]}"
+    }
+
+    t = []
+
+    for key, value in r.items():
+        t.append({key: value})
+    t = sorted(t, key=lambda x: list(x.keys())[0])
+    t = "".join(str(value) for item in t for value in item.values())
+    sha256 = hashlib.sha256()
+    sha256.update(t.encode('utf-8'))
+    t = sha256.hexdigest()
+    r["Token"] = t
+    print(r)
+    response = requests.post(payments_url, headers={'Content-Type': 'application/json'}, json=r)
+    print(response)
+    print(response.json())
+    return redirect(response.json()['PaymentURL'])
+
 
 @app.route('/success')
 def success():
@@ -273,6 +335,17 @@ def create_event():
         return '<h1>Вы успешно создали мероприятие</h1>'
     else:
         return render_template('create_event.html', title='Новое мероприятие', form=form)
+
+
+@app.route('/create_hall')
+def new_hall():
+    return 'Создаём новый зал'
+
+
+@app.route('/fail')
+def fail():
+    return 'оплата не прошла'
+
 
 if __name__ == "__main__":
     app.run()

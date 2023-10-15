@@ -38,7 +38,7 @@ class Event(Base):
     price = Column(Integer)
     hall_length = Column(String(250))
     hall_width = Column(String(250))
-"""
+
 class Hall(Base):
     __tablename__ = 'halls'
 
@@ -47,6 +47,18 @@ class Hall(Base):
     place = Column(String(250), nullable=False)
     status = Column(String(250), nullable=False)
     reserver = Column(String(250), nullable=False)
+"""
+
+class Order(Base):
+    __tablename__ = 'orders'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    amount = Column(Integer, nullable=False)
+    status = Column(String(250), nullable=False)
+    reserver = Column(String(250), nullable=False)
+    event_id = Column(Integer, nullable=False)
+    places = Column(String(250), nullable=False)
+
 
 engine = create_engine('sqlite:///db/events.db')
 
