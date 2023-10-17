@@ -4,13 +4,18 @@
 <form method="post" novalidate>
     <h1>Мероприятие {{event.title}}</h1>
     <h2>схема зала</h2>
-    <h3 style="color: red">Внимание! Бронь действительна 20 минут, далее она обнуляется!</h3>
+    <h3 style="color: red">Внимание! В данный момент оплата онлайн недоступна, вы можете лишь забронировать билеты. Просим прощения за предоставленные неудобства!</h3>
     <table>
         <tbody>
         {% for row in data %}
-            <tr><td>ряд {{row[0][0][0]}}</td>
+            <tr><td>ряд {{row[0][0][0]}} (цена - {{row[0][-1][-1]}}₽)</td>
             {% for place in row %}
-            <td><button name="button" style="{{place[1][0]}}" value="n_{{place[0][0]}}_{{place[0][1]}}" {{place[1][1]}}>{{place[0][1]}}</button></td>
+                {% if place[-1][0] != "deleted" %}
+                    <td><button name="button" style="{{place[1][0]}}" value="n_{{place[0][0]}}_{{place[0][1]}}" {{place[1][1]}}>{{place[0][1]}}</button></td>
+                {% else %}
+                    <td><button name="button" style="visibility: hidden" value="there is no place"></button></td>
+                {% endif %}
+
             {% endfor %}
             </tr>
         {% endfor %}

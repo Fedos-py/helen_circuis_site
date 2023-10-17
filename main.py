@@ -28,22 +28,52 @@ class Event(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.Text)
-    locality = db.Column(db.Text)
-    location = db.Column(db.Text)
     date = db.Column(db.Text)
     time = db.Column(db.Text)
-    hall_length = db.Column(db.Text)
-    hall_width = db.Column(db.Text)
-    price = db.Column(db.Integer)
+    hall_id = db.Column(db.Text)
 
 class Hall(db.Model):
     __tablename__ = 'halls'
 
-    hall_id = db.Column(db.Integer, primary_key=True)
-    id = db.Column(db.Integer)
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.Text)
+    length = db.Column(db.Text)
+    width = db.Column(db.Text)
+    locality = db.Column(db.Text)
+    location = db.Column(db.Text)
+
+
+class HallPlaces(db.Model):
+    __tablename__ = 'halls_places'
+
+    id = db.Column(db.Integer, primary_key=True)
+    hall_id = db.Column(db.Integer)
     place = db.Column(db.Text)
     status = db.Column(db.Text)
     reserver = db.Column(db.Text)
+    price = db.Column(db.Text)
+
+
+class HallTemplatePlace(db.Model):
+    __tablename__ = 'hall_templates_places'
+
+    id = db.Column(db.Integer, primary_key=True)
+    hall_id = db.Column(db.Integer)
+    place = db.Column(db.Text)
+    status = db.Column(db.Text)
+    reserver = db.Column(db.Text)
+    price = db.Column(db.Integer)
+
+
+class HallTemplateList(db.Model):
+    __tablename__ = 'hall_templates_list'
+
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.Text)
+    length = db.Column(db.Text)
+    width = db.Column(db.Text)
+    locality = db.Column(db.Text)
+    location = db.Column(db.Text)
 
 
 class Order(db.Model):
@@ -77,30 +107,38 @@ class User(UserMixin, db.Model):
 
 def get_event_data(id, c_user=' '):
     data = Event.query.filter_by(id=id).all()[0]
-    hall_length = int(data.hall_length)
-    hall_width = int(data.hall_width)
-    data_places = Hall.query.filter_by(id=id).all()
+    hall = Hall.query.filter_by(id=data.hall_id).all()[0]
+    hall_length = int(hall.length)
+    hall_width = int(hall.width)
+    data_places = HallPlaces.query.filter_by(hall_id=data.hall_id).all()
     places = []
     for el in data_places:
+        print(el.price)
         if el.status == 'available':
-            places.append([el.place.split('_')[1:], [' ', ' ']])
+            places.append([el.place.split('_')[1:], [' ', ' '], ['visible', el.price]])
         elif el.status == 'reserved' and el.reserver == c_user:
-            places.append([el.place.split('_')[1:], ['background-color: lime', ' ']])
+            places.append([el.place.split('_')[1:], ['background-color: lime', ' '], ['visible', el.price]])
         elif el.status == 'busy':
-            places.append([el.place.split('_')[1:], ['background-color: red', 'disabled']])
+            places.append([el.place.split('_')[1:], ['background-color: red', 'disabled'], ['visible', el.price]])
+        elif el.status == 'deleted':
+            places.append([el.place.split('_')[1:], [' ', ' '], ['deleted', el.price]])
         else:
-            places.append([el.place.split('_')[1:], ['background-color: yellow', 'disabled']])
+            places.append([el.place.split('_')[1:], ['background-color: yellow', 'disabled'], el.price])
     hall = []
     for i in range(hall_length):
         hall.append(places[i * hall_width:(i + 1) * hall_width])
+    print(hall)
     return data, hall
 
 def get_basket_data(id, reserver):
-    basket_data = Hall.query.filter_by(reserver=reserver, id=id).all()
+    basket_data = HallPlaces.query.filter_by(reserver=reserver, hall_id=id).all()
     event_data = Event.query.filter_by(id=id).all()[0]
-    basket = [len(basket_data), len(basket_data) * event_data.price, []]
+    full_price = 0
+    basket = [len(basket_data), 0, []]
     for el in basket_data:
+        full_price += el.price
         basket[2].append(el.place)
+    basket[1] = full_price
     return basket
 
 def generate_ticket(event):
@@ -117,15 +155,16 @@ def generate_ticket(event):
 
 
 def get_data_of_current_user():
-    tickets_data = Hall.query.filter_by(reserver=current_user.email).all()
+    tickets_data = HallPlaces.query.filter_by(reserver=current_user.email).all()
     print(tickets_data)
     data = []
     for el in tickets_data:
-        event_data = Event.query.filter_by(id=el.id).all()[0]
+        event_data = Event.query.filter_by(id=el.hall_id).all()[0]
+        hall_data = Hall.query.filter_by(id=el.hall_id).all()[0]
         print(event_data)
         place = el.place.split('_')
         data.append(
-            [f'{event_data.title} в {event_data.locality}', place[1], place[2], event_data.location, event_data.date, event_data.id, event_data.price])
+            [f'{event_data.title} в {hall_data.locality}', place[1], place[2], hall_data.location, event_data.date, event_data.id, el.price])
     print(data)
     return data
 
@@ -187,7 +226,7 @@ def auth():
 @login_required
 def logout():
     logout_user()
-    return redirect(url_for('events'))
+    return redirect(url_for('afisha'))
 
 
 @app.route('/ticket/<id>')
@@ -211,7 +250,8 @@ def basket():
 def afisha():
     data_events = Event.query.all()
     print(data_events)
-    return render_template('afisha.html', data=data_events)
+    dop_data = Hall.query.all()[0]
+    return render_template('afisha.html', data=data_events,dop_data=dop_data)
 
 @app.route('/map/<address>')
 def map(address):
@@ -284,19 +324,16 @@ def button_handler():
         return render_template('check.html')
 
 @app.route('/event/<id>/tickets', methods=['GET', 'POST'])
-def tickets(id):
+def tickets_old(id):
     if isinstance(current_user, AnonymousUserMixin):
         data, hall = get_event_data(id)
-        print(data, hall)
         return render_template('tickets_anon.html', data=hall, event=data)
     else:
         if request.method == 'POST':
-            print(True)
-            print(request.form)
-            print(len(request.form))
             button_value = request.form['button']
             print(f'Нажата кнопка с значением {button_value}')
-            get_place = Hall.query.filter_by(id=id, place=button_value).all()[0]
+            id = Event.query.filter_by(id=id).all()[0].hall_id
+            get_place = HallPlaces.query.filter_by(hall_id=id, place=button_value).all()[0]
             print(get_place)
             if get_place.reserver == current_user.email:
                 get_place.reserver = ' '
@@ -310,36 +347,111 @@ def tickets(id):
         print(basket)
         return render_template('tickets.html', data=hall, event=data, user=current_user.email, basket=basket)
 
+@app.route('/event/<id>/tickets_new', methods=['GET', 'POST'])
+def tickets(id):
+    return 'biletov.net'
+
 @app.route('/create_event', methods=['GET', 'POST'])
 def create_event():
     form = CreateEventForm()
     if form.validate_on_submit():
+        print(request.form)
+        hall_for_copy = int(request.form['halls'])
+        hall_father = HallTemplateList.query.filter_by(id=hall_for_copy).all()[0]
+        hall_father_places = HallTemplatePlace.query.filter_by(hall_id=hall_for_copy).all()
+        print(hall_father)
+        print(hall_father_places)
+        title = request.form['title']
+        date = request.form['date']
+        time = request.form['time']
+        print(f"father{hall_father.id}")
+        hall = Hall(title=hall_father.title, length=hall_father.length, width=hall_father.width, locality=hall_father.locality, location=hall_father.location)
+        db.session.add(hall)
+        db.session.commit()
+        id = Hall.query.filter_by(title=hall_father.title, length=hall_father.length, width=hall_father.width, locality=hall_father.locality, location=hall_father.location).all()[0].id
+        for elem in hall_father_places:
+            place = HallPlaces(hall_id=id, place=elem.place, status=elem.status, reserver=" ", price=elem.price)
+            db.session.add(place)
+        db.session.commit()
+        event = Event(title=title, date=date, time=time, hall_id=id)
+        db.session.add(event)
+        db.session.commit()
+        print(id)
+
+        return '<h1>Вы успешно создали мероприятие</h1>'
+    else:
+        halls = HallTemplateList.query.filter_by().all()
+        return render_template('create_event.html', title='Новое мероприятие', form=form, halls=halls)
+
+
+@app.route('/create_hall', methods=['GET', 'POST'])
+def new_hall():
+    form = CreateHallForm()
+    if form.validate_on_submit():
+        print('нажали кнопку')
         title = request.form['title']
         locality = request.form['locality']
         location = request.form['location']
-        date = request.form['date']
-        time = request.form['time']
-        price = int(request.form['price'])
-        hall_length = request.form['hall_length']
-        hall_width = request.form['hall_width']
-        event = Event(title=title, locality=locality, location=location, date=date, time=time, hall_length=hall_length, hall_width=hall_width, price=price)
+        length = request.form['hall_length']
+        width = request.form['hall_width']
+        event = HallTemplateList(title=title, length=length,  width=width, locality=locality, location=location)
         db.session.add(event)
         db.session.commit()
-        id = Event.query.filter_by(title=title, locality=locality, location=location, date=date, time=time, hall_length=hall_length, hall_width=hall_width, price=price).all()[0].id
+        id = HallTemplateList.query.filter_by(title=title, length=length,  width=width, locality=locality, location=location).all()[0].id
         print(id)
-        for n in range(1, int(hall_length) + 1):
-            for m in range(1, int(hall_width) + 1):
-                hall = Hall(id=id, place=f'n_{n}_{m}', status='available', reserver=' ')
-                db.session.add(hall)
+        for n in range(1, int(length) + 1):
+            for m in range(1, int(width) + 1):
+                place = HallTemplatePlace(hall_id=id, place=f'n_{n}_{m}', status='available', reserver=' ', price=0)
+                db.session.add(place)
         db.session.commit()
-        return '<h1>Вы успешно создали мероприятие</h1>'
-    else:
-        return render_template('create_event.html', title='Новое мероприятие', form=form)
+        return "Создан новый шаблон. Теперь можно <a href='/edit_hall'> его редактировать </a>"
+    return render_template('create_hall.html', title='Новый зал', form=form)
 
 
-@app.route('/create_hall')
-def new_hall():
-    return 'Создаём новый зал'
+@app.route('/edit_hall/<id>', methods=['GET', 'POST'])
+def edit_hall(id):
+    get_price = False
+    if request.method == 'POST':
+        print(request.form)
+        if "button" in request.form.keys():
+            print("ОГОГО")
+            button_value = request.form['button']
+            print(f'Нажата кнопка с значением {button_value}')
+            get_place = HallTemplatePlace.query.filter_by(hall_id=id, place=button_value).all()[0]
+            if get_place.status == 'deleted':
+                get_place.status = 'available'
+            else:
+                get_place.status = 'deleted'
+            db.session.commit()
+        elif "button_save" in request.form.keys():
+            for key in request.form.keys():
+                if key != "button_save":
+                    get_places = HallTemplatePlace.query.filter_by(hall_id=id).all()
+                    for el in get_places:
+                        if el.place.split('_')[1] == key:
+                            el.price = request.form[key]
+            db.session.commit()
+
+    template_data = HallTemplateList.query.filter_by(id=id).all()[0]
+    data = HallTemplatePlace.query.filter_by(hall_id=id).all()
+    print(data)
+    places = []
+    hall_width = int(template_data.width)
+    hall_length = int(template_data.length)
+    for el in data:
+        place = el.place.split('_')[1:]
+        if el.status == 'deleted':
+            place.append('background-color: red')
+        else:
+            place.append(' ')
+        place.append(el.price)
+        places.append(place)
+    hall = []
+    for i in range(hall_length):
+        hall.append(places[i * hall_width:(i + 1) * hall_width])
+    print(hall)
+
+    return render_template('edit_hall.html', title='Новый зал', name=template_data.title, data=hall)
 
 
 @app.route('/fail')

@@ -47,7 +47,7 @@ class Hall(Base):
     place = Column(String(250), nullable=False)
     status = Column(String(250), nullable=False)
     reserver = Column(String(250), nullable=False)
-"""
+
 
 class Order(Base):
     __tablename__ = 'orders'
@@ -58,6 +58,58 @@ class Order(Base):
     reserver = Column(String(250), nullable=False)
     event_id = Column(Integer, nullable=False)
     places = Column(String(250), nullable=False)
+
+class HallTemplatePlaces(Base):
+    __tablename__ = 'hall_templates_places'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    hall_id = Column(Integer, nullable=False)
+    place = Column(String(250), nullable=False)
+    status = Column(String(250), nullable=False)
+    reserver = Column(String(250), nullable=False)
+    price = Column(Integer, nullable=False)
+
+class HallTemplateList(Base):
+    __tablename__ = 'hall_templates_list'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    title = Column(String(250), nullable=False)
+    length = Column(String(250), nullable=False)
+    width = Column(Integer, nullable=False)
+    locality = Column(String(250), nullable=False)
+    location = Column(String(250), nullable=False)
+    
+    
+
+
+class Event(Base):
+    __tablename__ = 'events'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    title = Column(String(250), nullable=False)
+    date = Column(String(250), nullable=False)
+    time = Column(String(250), nullable=False)
+    hall_id = Column(Integer, nullable=False)
+"""
+class Hall(Base):
+    __tablename__ = 'halls'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    title = Column(String(250), nullable=False)
+    length = Column(String(250), nullable=False)
+    width = Column(Integer, nullable=False)
+    locality = Column(String(250), nullable=False)
+    location = Column(String(250), nullable=False)
+
+class HallPlaces(Base):
+    __tablename__ = 'halls_places'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    hall_id = Column(Integer, nullable=False)
+    place = Column(String(250), nullable=False)
+    status = Column(String(250), nullable=False)
+    reserver = Column(String(250), nullable=False)
+    price = Column(Integer, nullable=False)
 
 
 engine = create_engine('sqlite:///db/events.db')

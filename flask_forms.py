@@ -15,13 +15,8 @@ class LoginForm(FlaskForm):
 
 class CreateEventForm(FlaskForm):
     title = StringField('Название', validators=[DataRequired()])
-    locality = StringField('Населённый пункт', validators=[DataRequired()])
-    location = StringField('Адрес(ул. У, д.Н)', validators=[DataRequired()])
     date = StringField('Дата(ДД.ММ.ГГГГ)', validators=[DataRequired()])
     time = StringField('Время(ЧЧ:ММ)', validators=[DataRequired()])
-    price = StringField('Стоимость посещения мероприятия')
-    hall_length = StringField('Длина зала(кол-во рядов)')
-    hall_width = StringField('Ширина зала(кол-во рядов)')
     submit = SubmitField('Создать')
 
     def __repr__(self):
@@ -46,6 +41,18 @@ class AddItemForm(FlaskForm):
     about = StringField('Описание', validators=[DataRequired()])
     remember_me = BooleanField('Запомнить меня')
     submit = SubmitField('Добавить')
+
+    def __repr__(self):
+        return '<User %r>' % self.username
+
+
+class CreateHallForm(FlaskForm):
+    title = StringField('Название', validators=[DataRequired()])
+    locality = StringField('Населённый пункт', validators=[DataRequired()])
+    location = StringField('Адрес(ул. У, д.Н)', validators=[DataRequired()])
+    hall_length = StringField('Длина зала(кол-во рядов)')
+    hall_width = StringField('Ширина зала(кол-во рядов)')
+    submit = SubmitField('Создать')
 
     def __repr__(self):
         return '<User %r>' % self.username

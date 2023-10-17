@@ -19,24 +19,6 @@
     {% endfor %}
     </p>
     <p>
-        {{ form.locality.label }}<br>
-        {{ form.locality(class="form-control") }}<br>
-        {% for error in form.locality.errors %}
-    <div class="alert alert-danger" role="alert">
-        {{ error }}
-    </div>
-    {% endfor %}
-    </p>
-    <p>
-        {{ form.location.label }}<br>
-        {{ form.location(class="form-control") }}<br>
-        {% for error in form.location.errors %}
-    <div class="alert alert-danger" role="alert">
-        {{ error }}
-    </div>
-    {% endfor %}
-    </p>
-    <p>
         {{ form.date.label }}<br>
         {{ form.date(class="form-control") }}<br>
         {% for error in form.date.errors %}
@@ -54,32 +36,13 @@
     </div>
     {% endfor %}
     </p>
-        <p>
-        {{ form.price.label }}<br>
-        {{ form.price(class="form-control") }}<br>
-        {% for error in form.price.errors %}
-    <div class="alert alert-danger" role="alert">
-        {{ error }}
-    </div>
-    {% endfor %}
-    </p>
     <h3>Информация о зале</h3>
-    <p>
-        {{ form.hall_length.label }}<br>
-        {{ form.hall_length(class="form-control") }}<br>
-        {% for error in form.hall_length.errors %}
-    <div class="alert alert-danger" role="alert">
-        {{ error }}
-    </div>
-    {% endfor %}
-    <p>
-        {{ form.hall_width.label }}<br>
-        {{ form.hall_width(class="form-control") }}<br>
-        {% for error in form.hall_width.errors %}
-    <div class="alert alert-danger" role="alert">
-        {{ error }}
-    </div>
-    {% endfor %}
+    <select id="halls" name="halls">
+        {% for hall in halls %}
+        <option value="{{hall.id}}">{{hall.title}}</option>
+        {% endfor %}
+  </select>
+    Если нужного зала нет в списке, Вы можете <a href="/create_hall">создать новый зал</a>
     <p>{{ form.submit(type="submit", class="btn btn-primary") }}</p>
     </form>
 </body>

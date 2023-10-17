@@ -6,9 +6,13 @@
     <table>
         <tbody>
         {% for row in data %}
-            <tr><td>ряд {{row[0][0][0]}}</td>
+            <tr><td>ряд {{row[0][0][0]}} (цена - {{row[0][-1][-1]}}₽)</td>
             {% for place in row %}
-            <td><button name="button" style="{{place[1][0]}}" value="n_{{place[0][0]}}_{{place[0][1]}}" {{place[1][1]}} onclick="if (confirm('Для выбора мест и покупки билетов необходимо ввести E-mail. Пожалуйста, вводите настоящий адрес электронной почты, после покупки билеты будут отправлены именно на него. Для перехода к авторизации нажмите OK.')){ window.location.replace('/auth?event_id={{event.id}}'); }">{{place[0][1]}}</button></td>
+                {% if place[-1][0] != "deleted" %}
+                    <td><button name="button" style="{{place[1][0]}}" value="n_{{place[0][0]}}_{{place[0][1]}}" {{place[1][1]}} onclick="if (confirm('Для выбора мест и покупки билетов необходимо ввести E-mail. Пожалуйста, вводите настоящий адрес электронной почты, после покупки билеты будут отправлены именно на него. Для перехода к авторизации нажмите OK.')){ window.location.replace('/auth?event_id={{event.id}}'); }">{{place[0][1]}}</button></td>
+                {% else %}
+                    <td><button name="button" style="visibility: hidden" value="there is no place"></button></td>
+                {% endif %}
             {% endfor %}
             </tr>
         {% endfor %}
