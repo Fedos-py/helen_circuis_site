@@ -6,11 +6,11 @@
     <table>
         <tbody>
         {% for row in data %}
-            <tr><td>ряд {{row[0][0][0]}}</td>
+            <tr><td>ряд {{row[0][0]}}</td>
             {% for place in row %}
             <td><button name="button" style="{{place[2]}}" value="n_{{place[0]}}_{{place[1]}}">{{place[1]}}</button></td>
             {% endfor %}
-                <td><input type="text" name="{{row[0][0][0]}}" value="{{row[0][-1]}}"></td>
+                <td><input type="text" name="{{row[0][0]}}" value="{{row[0][-1]}}"></td>
             </tr>
         {% endfor %}
         </tbody>
