@@ -9,6 +9,7 @@ import requests
 
 from flask_forms import *
 from private_info import *
+from mail import send_email
 
 file_path = os.path.abspath(os.getcwd())
 
@@ -41,6 +42,7 @@ class Hall(db.Model):
     width = db.Column(db.Text)
     locality = db.Column(db.Text)
     location = db.Column(db.Text)
+    event_id = db.Column(db.Integer)
 
 
 class HallPlaces(db.Model):
@@ -51,7 +53,8 @@ class HallPlaces(db.Model):
     place = db.Column(db.Text)
     status = db.Column(db.Text)
     reserver = db.Column(db.Text)
-    price = db.Column(db.Text)
+    price = db.Column(db.Integer)
+    event_id = db.Column(db.Integer)
 
 
 class HallTemplatePlace(db.Model):
@@ -92,6 +95,7 @@ class User(UserMixin, db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(250), nullable=False)
+    current_payment = db.Column(db.Integer)
 
     def is_authenticated(self):
         return True
@@ -113,7 +117,6 @@ def get_event_data(id, c_user=' '):
     data_places = HallPlaces.query.filter_by(hall_id=data.hall_id).all()
     places = []
     for el in data_places:
-        print(el.price)
         if el.status == 'available':
             places.append([el.place.split('_')[1:], [' ', ' '], ['visible', el.price]])
         elif el.status == 'reserved' and el.reserver == c_user:
@@ -131,7 +134,7 @@ def get_event_data(id, c_user=' '):
     return data, hall
 
 def get_basket_data(id, reserver):
-    basket_data = HallPlaces.query.filter_by(reserver=reserver, hall_id=id).all()
+    basket_data = HallPlaces.query.filter_by(reserver=reserver, hall_id=id, status='reserved').all()
     event_data = Event.query.filter_by(id=id).all()[0]
     full_price = 0
     basket = [len(basket_data), 0, []]
@@ -155,7 +158,7 @@ def generate_ticket(event):
 
 
 def get_data_of_current_user():
-    tickets_data = HallPlaces.query.filter_by(reserver=current_user.email).all()
+    tickets_data = HallPlaces.query.filter_by(reserver=current_user.email, status='reserved').all()
     print(tickets_data)
     data = []
     for el in tickets_data:
@@ -167,6 +170,20 @@ def get_data_of_current_user():
             [f'{event_data.title} в {hall_data.locality}', place[1], place[2], hall_data.location, event_data.date, event_data.id, el.price])
     print(data)
     return data
+
+
+def get_token(request):
+    t = []
+
+    for key, value in request.items():
+        if key == "TerminalKey" or key == "Amount" or key == "OrderId" or key == "Password" or key == "PaymentId":
+            t.append({key: value})
+    t = sorted(t, key=lambda x: list(x.keys())[0])
+    t = "".join(str(value) for item in t for value in item.values())
+    sha256 = hashlib.sha256()
+    sha256.update(t.encode('utf-8'))
+    t = sha256.hexdigest()
+    return t
 
 
 @app.route('/')
@@ -250,7 +267,7 @@ def basket():
 def afisha():
     data_events = Event.query.all()
     print(data_events)
-    dop_data = Hall.query.all()[0]
+    dop_data = Hall.query.all()
     return render_template('afisha.html', data=data_events,dop_data=dop_data)
 
 @app.route('/map/<address>')
@@ -262,9 +279,20 @@ def payment():
     data = get_data_of_current_user()
     amount = 0
     places = ''
+    Items_FFD_12 = []
     for el in data:
         amount += el[-1]
         places += f'{el[1]}_{el[2]} '
+        Items_FFD_12.append({
+            "Name": f'Билет на мероприятие. Ряд: {el[1]}. Место:{el[2]}.',
+            "Price": el[-1] * 100,
+            "Quantity": 1,
+            "Amount": el[-1] * 100,
+            "Tax": "vat20",
+            "PaymentMethod": "full_prepayment",
+            "PaymentObject": "service",
+            "MeasurementUnit": "HUR"
+        })
     id = int(data[0][-2])
     amount = amount * 100
     order = Order(amount=amount, status="new", reserver=current_user.email, event_id=id, places=places)
@@ -277,38 +305,75 @@ def payment():
         "Amount": amount,
         "OrderId": oid,
         "Password": tinkoff_password,
-        "Success URL": "http://127.0.0.1:5000/success",
-        "Fail URL": "http://127.0.0.1:5000/fail",
-        "Description": f"Оплата билетов. {data[0][0]}"
+        "Description": f"Оплата билетов. {data[0][0]}",
+        "Receipt": {
+            "FfdVersion": "1.2",
+            "Taxation": "osn",
+            "Email": current_user.email,
+            "Items": Items_FFD_12
+        }
     }
 
-    t = []
-
-    for key, value in r.items():
-        t.append({key: value})
-    t = sorted(t, key=lambda x: list(x.keys())[0])
-    t = "".join(str(value) for item in t for value in item.values())
-    sha256 = hashlib.sha256()
-    sha256.update(t.encode('utf-8'))
-    t = sha256.hexdigest()
+    t = get_token(r)
     r["Token"] = t
     print(r)
     response = requests.post(payments_url, headers={'Content-Type': 'application/json'}, json=r)
     print(response)
     print(response.json())
+    user = User().query.filter_by(email=current_user.email).all()[0]
+    user.current_payment = response.json()['PaymentId']
+    db.session.commit()
     return redirect(response.json()['PaymentURL'])
 
 
+@app.route('/success_redirect/', methods=['GET'])
+def success_redirect():
+    return redirect('/success')
+
 @app.route('/success')
 def success():
+    """
     page = 'Список купленных билетов: <br>'
     tickets_data = Hall.query.filter_by(reserver=current_user.email).all()
     print(tickets_data)
     for event in tickets_data:
         page += f'{generate_ticket(event)}<br>'
     print(page)
-    return page
+    """
+    user = User.query.filter_by(email=current_user.email).all()[0]
+    r = {
+        "TerminalKey": tinkoff_terminalkey,
+        "Password": tinkoff_password,
+        "PaymentId": user.current_payment
+    }
 
+    t = get_token(r)
+    r["Token"] = t
+    print(r)
+    response = requests.post('https://securepay.tinkoff.ru/v2/GetState', headers={'Content-Type': 'application/json'}, json=r)
+    print(response)
+    print(response.json())
+    status = response.json()['Status']
+    print(status)
+    if status == 'CONFIRMED':
+        order = Order.query.filter_by(reserver=current_user.email).all()[-1]
+        tickets = order.places.split(' ')[:-1]
+        places = []
+        for elem in tickets:
+            print(f'n_{elem}')
+            ticket = HallPlaces.query.filter_by(reserver=current_user.email, event_id=order.event_id, place=f'n_{elem}').all()[0]
+            ticket.status = 'busy'
+            el_pl = elem.split('_')
+            places.append(f'Ряд:{el_pl[0]}. Место:{el_pl[1]}.')
+        user.current_payment = 0
+        order.status = 'success'
+        db.session.commit()
+        event = Event.query.filter_by(id=order.event_id).all()[0]
+        hall = Hall.query.filter_by(event_id=event.id).all()[0]
+        send_email(current_user.email, f'Здравствуйте! Вы успешно приобрели билеты на нашем сайте <b>teatr-gamma.ru</b> <br>Мероприятие: <b>{event.title} {event.date} в {event.time}</b> <br> Место проведения: <b>{hall.title}({hall.locality}, {hall.location})</b><br> Ваши места: <b>{", ".join(places)}</b>')
+        return "<center><h3>Вы успешно оплатили выбранные билеты.<br>Билеты отправлены на указанную почту.<br><a href='/'>Вернуться на главную страницу</a></h3></center>"
+    else:
+        return f"<center><h3 style='color: red'>К сожалению, оплата не прошла. Статус платежа {status}<br>Побробуйте снова!<br><a href='/basket'>Вернуться к корзине</a></h3></center>"
 
 
 @app.route('/check', methods=['GET', 'POST'])
@@ -351,34 +416,34 @@ def tickets_old(id):
 def tickets(id):
     return 'biletov.net'
 
+
 @app.route('/create_event', methods=['GET', 'POST'])
 def create_event():
     form = CreateEventForm()
     if form.validate_on_submit():
-        print(request.form)
         hall_for_copy = int(request.form['halls'])
         hall_father = HallTemplateList.query.filter_by(id=hall_for_copy).all()[0]
         hall_father_places = HallTemplatePlace.query.filter_by(hall_id=hall_for_copy).all()
-        print(hall_father)
-        print(hall_father_places)
         title = request.form['title']
         date = request.form['date']
         time = request.form['time']
-        print(f"father{hall_father.id}")
-        hall = Hall(title=hall_father.title, length=hall_father.length, width=hall_father.width, locality=hall_father.locality, location=hall_father.location)
-        db.session.add(hall)
-        db.session.commit()
-        id = Hall.query.filter_by(title=hall_father.title, length=hall_father.length, width=hall_father.width, locality=hall_father.locality, location=hall_father.location).all()[0].id
-        for elem in hall_father_places:
-            place = HallPlaces(hall_id=id, place=elem.place, status=elem.status, reserver=" ", price=elem.price)
-            db.session.add(place)
-        db.session.commit()
-        event = Event(title=title, date=date, time=time, hall_id=id)
+        event = Event(title=title, date=date, time=time, hall_id=0)
         db.session.add(event)
         db.session.commit()
-        print(id)
+        hall = Hall(title=hall_father.title, length=hall_father.length, width=hall_father.width, locality=hall_father.locality, location=hall_father.location, event_id=event.id)
+        db.session.add(hall)
+        db.session.commit()
+        id = Hall.query.filter_by(title=hall_father.title, length=hall_father.length, width=hall_father.width, locality=hall_father.locality, location=hall_father.location, event_id=event.id).all()[0].id
+        event_id = Event.query.filter_by(title=title, date=date, time=time, hall_id=0).all()[0].id
+        for elem in hall_father_places:
+            place = HallPlaces(hall_id=id, place=elem.place, status=elem.status, reserver=" ", price=elem.price, event_id=event_id)
+            db.session.add(place)
+        db.session.commit()
+        event = Event.query.filter_by(title=title, date=date, time=time, hall_id=0).all()[0]
+        event.hall_id = id
+        db.session.commit()
 
-        return '<h1>Вы успешно создали мероприятие</h1>'
+        return f'<h1>Вы успешно создали мероприятие. Event id={id}</h1>'
     else:
         halls = HallTemplateList.query.filter_by().all()
         return render_template('create_event.html', title='Новое мероприятие', form=form, halls=halls)
@@ -454,9 +519,13 @@ def edit_hall(id):
     return render_template('edit_hall.html', title='Новый зал', name=template_data.title, data=hall)
 
 
-@app.route('/fail')
-def fail():
-    return 'оплата не прошла'
+@app.route('/fail_redirect/', methods=['GET'])
+def fail_redirect():
+    message = request.args.get('Message')
+    return redirect(f'/fail/{message}')
+@app.route('/fail/<error>')
+def fail(error):
+    return f"<center><h3 style='color: red'>К сожалению, оплата не прошла.<br>Ошибка: {error} Побробуйте снова!<br><a href='/basket'>Вернуться к корзине</a></h3></center>"
 
 
 if __name__ == "__main__":
