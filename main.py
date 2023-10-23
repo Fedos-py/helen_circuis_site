@@ -32,6 +32,7 @@ class Event(db.Model):
     date = db.Column(db.Text)
     time = db.Column(db.Text)
     hall_id = db.Column(db.Text)
+    active = db.Column(db.Text)
 
 class Hall(db.Model):
     __tablename__ = 'halls'
@@ -211,10 +212,32 @@ def about():
     return render_template('about.html')
 
 
-@app.route('/events')
+@app.route('/events', methods=['POST', 'GET'])
 def events():
     data_events = Event.query.all()
-    return render_template('events.html', data=data_events)
+    halls = Hall.query.all()
+    if request.method == 'POST':
+        id = int(list(request.form.keys())[-1])
+        event = Event.query.filter_by(id=id).all()[0]
+        hall = Hall.query.filter_by(id=id).all()[0]
+        if request.form['title'] != event.title:
+            event.title = request.form['title']
+        if request.form['hall'] != hall.title:
+            hall.title = request.form['hall']
+        if request.form['locality'] != hall.locality:
+            hall.locality = request.form['locality']
+        if request.form['location'] != hall.location:
+            hall.location = request.form['location']
+        if request.form['date'] != event.date:
+            event.date = request.form['date']
+        if request.form['time'] != event.time:
+            event.time = request.form['time']
+        if 'checkbox' in request.form and event.active == 0:
+            event.active = 1
+        elif 'checkbox' not in request.form and event.active == 1:
+            event.active = 0
+        db.session.commit()
+    return render_template('events.html', data=data_events, halls=halls)
 
 @app.route('/auth', methods=['POST', 'GET'])
 def auth():
@@ -265,10 +288,11 @@ def basket():
 
 @app.route('/afisha')
 def afisha():
-    data_events = Event.query.all()
+    data_events = Event.query.filter_by(active=1).all()
     print(data_events)
     dop_data = Hall.query.all()
-    return render_template('afisha.html', data=data_events,dop_data=dop_data)
+    print(dop_data)
+    return render_template('afisha.html', data=data_events, dop_data=dop_data)
 
 @app.route('/map/<address>')
 def map(address):
@@ -390,27 +414,31 @@ def button_handler():
 
 @app.route('/event/<id>/tickets', methods=['GET', 'POST'])
 def tickets_old(id):
-    if isinstance(current_user, AnonymousUserMixin):
-        data, hall = get_event_data(id)
-        return render_template('tickets_anon.html', data=hall, event=data)
+    event = Event.query.filter_by(id=id).all()[0]
+    if event.active == 1:
+        if isinstance(current_user, AnonymousUserMixin):
+            data, hall = get_event_data(id)
+            return render_template('tickets_anon.html', data=hall, event=data)
+        else:
+            if request.method == 'POST':
+                button_value = request.form['button']
+                print(f'Нажата кнопка с значением {button_value}')
+                id = Event.query.filter_by(id=id).all()[0].hall_id
+                get_place = HallPlaces.query.filter_by(hall_id=id, place=button_value).all()[0]
+                print(get_place)
+                if get_place.reserver == current_user.email:
+                    get_place.reserver = ' '
+                    get_place.status = 'available'
+                else:
+                    get_place.reserver = current_user.email
+                    get_place.status = 'reserved'
+                db.session.commit()
+            data, hall = get_event_data(id, current_user.email)
+            basket = get_basket_data(id, current_user.email)
+            print(basket)
+            return render_template('tickets.html', data=hall, event=data, user=current_user.email, basket=basket)
     else:
-        if request.method == 'POST':
-            button_value = request.form['button']
-            print(f'Нажата кнопка с значением {button_value}')
-            id = Event.query.filter_by(id=id).all()[0].hall_id
-            get_place = HallPlaces.query.filter_by(hall_id=id, place=button_value).all()[0]
-            print(get_place)
-            if get_place.reserver == current_user.email:
-                get_place.reserver = ' '
-                get_place.status = 'available'
-            else:
-                get_place.reserver = current_user.email
-                get_place.status = 'reserved'
-            db.session.commit()
-        data, hall = get_event_data(id, current_user.email)
-        basket = get_basket_data(id, current_user.email)
-        print(basket)
-        return render_template('tickets.html', data=hall, event=data, user=current_user.email, basket=basket)
+        return 'продажи на данное мероприятие в данный момент закрыты'
 
 @app.route('/event/<id>/tickets_new', methods=['GET', 'POST'])
 def tickets(id):
