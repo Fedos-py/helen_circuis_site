@@ -5,6 +5,7 @@ import os
 from jinja2 import Template
 import hashlib
 import requests
+import qrcode
 
 
 from flask_forms import *
@@ -20,6 +21,7 @@ login_manager = LoginManager(app)
 db = SQLAlchemy(app)
 payments_url = "https://securepay.tinkoff.ru/v2/Init"
 
+
 @login_manager.user_loader
 def load_user(email):
     return User.query.filter_by(email=email).first()
@@ -33,6 +35,16 @@ class Event(db.Model):
     time = db.Column(db.Text)
     hall_id = db.Column(db.Text)
     active = db.Column(db.Text)
+
+class Link(db.Model):
+    __tablename__ = 'links'
+
+    id = db.Column(db.Integer, primary_key=True)
+    goto = db.Column(db.Text)
+    count = db.Column(db.Integer)
+    status = db.Column(db.Integer)
+    qr = db.Column(db.Text)
+
 
 class Hall(db.Model):
     __tablename__ = 'halls'
@@ -186,6 +198,26 @@ def get_token(request):
     t = sha256.hexdigest()
     return t
 
+
+def create_qr(url, filename):
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_L,
+        box_size=10,
+        border=4,
+    )
+    qr.add_data(url)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+    img.save(f'{file_path}/static/img/{filename}')
+
+def add_link(goto):
+    link = Link(goto=goto, count=0, status=1)
+    db.session.add(link)
+    db.session.commit()
+    create_qr(f'https://teatr-gamma.ru/link/{link.id}', f'qr-link-{link.id}.png')
+    link.qr = f'qr-link-{link.id}.png'
+    db.session.commit()
 
 @app.route('/')
 def index():
@@ -551,9 +583,33 @@ def edit_hall(id):
 def fail_redirect():
     message = request.args.get('Message')
     return redirect(f'/fail/{message}')
+
+
 @app.route('/fail/<error>')
 def fail(error):
     return f"<center><h3 style='color: red'>К сожалению, оплата не прошла.<br>Ошибка: {error} Побробуйте снова!<br><a href='/basket'>Вернуться к корзине</a></h3></center>"
+
+
+@app.route('/link/<id>')
+def link_redirect(id):
+    link = Link.query.filter_by(id=id).all()[0]
+    link.count += 1
+    db.session.commit()
+    return redirect(f'/{link.goto}')
+
+
+@app.route('/links')
+def links():
+    data = Link.query.all()
+    return render_template('links.html', data=data)
+
+@app.route('/create_link', methods=['GET', 'POST'])
+def create_link():
+    form = CreateLinkForm()
+    if form.validate_on_submit():
+        add_link(request.form['link'])
+        return 'Успешно создана ссылка. <a href="/links"> Вернуться к ссылкам</a>'
+    return render_template('create_link.html', form=form)
 
 
 if __name__ == "__main__":

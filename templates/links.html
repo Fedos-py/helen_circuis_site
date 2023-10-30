@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<link rel="manifest" href="manifest.json">
+    <h1>Ссылки</h1>
+    <a href="/create_link">Создать новую ссылку -></a>
+    <h3>Статистика ссылок:</h3>
+    <table>
+    <thead>
+    <th>Ссылка</th><th>Цель</th><th>количество переходов</th>
+    </thead>
+      <tbody>
+      {% for el in data %}
+          <div>
+              <samp>
+                <form method="post">
+                    <tr>
+                        <td><input type="text" name="link" value="teatr-gamma.ru/link/{{el.id}}" style="width: 135px;"></td>
+                        <td><input type="text" name="link" value="teatr-gamma.ru/{{el.goto}}" style="width: 180px;"></td>
+                        <td>{{el.count}}</td>
+                        <td><a href="https://teatr-gamma.ru/static/img/{{el.qr}}">QR-код</a><td>
+                    </tr>
+                </form>
+
+             </samp>
+          </div>
+      {% endfor %}
+      </tbody>
+    </table>
+{% endblock %}

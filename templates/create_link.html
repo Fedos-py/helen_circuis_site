@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Новая ссылка</title>
+</head>
+<body>
+<h1>Новая ссылка</h1>
+<form action="" method="post" novalidate>
+    {{ form.hidden_tag() }}
+    <h3>Уккажите ссылку, на которую будет перенаправлен пользователь</h3>
+    <h4 style="color: red">введите то, что после teatr-gamma.ru/ пример: event/2/tickets</h4>
+    <p>
+        {{ form.link.label }}<br>
+        {{ form.link(class="form-control") }}<br>
+        {% for error in form.link.errors %}
+    <div class="alert alert-danger" role="alert">
+        {{ error }}
+    </div>
+    {% endfor %}
+    </p>
+    <p>{{ form.submit(type="submit", class="btn btn-primary") }}</p>
+    </form>
+</body>
+</html>
