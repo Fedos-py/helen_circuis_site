@@ -612,5 +612,9 @@ def create_link():
     return render_template('create_link.html', form=form)
 
 
+@app.route('/admin')
+def admin():
+    return render_template('admin.html')
+
 if __name__ == "__main__":
     app.run()
