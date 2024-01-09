@@ -6,6 +6,7 @@ from jinja2 import Template
 import hashlib
 import requests
 import qrcode
+from werkzeug.utils import secure_filename
 
 
 from flask_forms import *
@@ -17,6 +18,8 @@ file_path = os.path.abspath(os.getcwd())
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{file_path}/db/events.db'
 app.config['SECRET_KEY'] = 'helen_secret_key'
+UPLOAD_FOLDER = 'static/img/'
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 login_manager = LoginManager(app)
 db = SQLAlchemy(app)
 payments_url = "https://securepay.tinkoff.ru/v2/Init"
@@ -487,7 +490,7 @@ def create_event():
         title = request.form['title']
         date = request.form['date']
         time = request.form['time']
-        event = Event(title=title, date=date, time=time, hall_id=0)
+        event = Event(title=title, date=date, time=time, hall_id=0, active=0)
         db.session.add(event)
         db.session.commit()
         hall = Hall(title=hall_father.title, length=hall_father.length, width=hall_father.width, locality=hall_father.locality, location=hall_father.location, event_id=event.id)
@@ -615,6 +618,21 @@ def create_link():
 @app.route('/admin')
 def admin():
     return render_template('admin.html')
+
+
+@app.route('/upload', methods=['GET', 'POST'])
+def upload():
+    if request.method == 'POST':
+        if 'file' not in request.files:
+            return 'Вы не выбрали файл! <a href="/upload">Вернуться</a>'
+        file = request.files['file']
+        if file.filename == '':
+            return 'Вы не выбрали файл! <a href="/upload">Вернуться</a>'
+        filename = secure_filename(file.filename)
+        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        return f'успешно сохранили файл <a href="/static/img/{filename}">Посмотреть картинку</a>'
+        print('POST')
+    return render_template('upload.html')
 
 if __name__ == "__main__":
     app.run()
