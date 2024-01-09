@@ -36,8 +36,9 @@ class Event(db.Model):
     title = db.Column(db.Text)
     date = db.Column(db.Text)
     time = db.Column(db.Text)
-    hall_id = db.Column(db.Text)
-    active = db.Column(db.Text)
+    hall_id = db.Column(db.Integer)
+    active = db.Column(db.Integer)
+    image = db.Column(db.Text)
 
 class Link(db.Model):
     __tablename__ = 'links'
@@ -534,7 +535,7 @@ def new_hall():
                 place = HallTemplatePlace(hall_id=id, place=f'n_{n}_{m}', status='available', reserver=' ', price=0)
                 db.session.add(place)
         db.session.commit()
-        return "Создан новый шаблон. Теперь можно <a href='/edit_hall'> его редактировать </a>"
+        return f"Создан новый шаблон. Теперь можно <a href='/edit_hall/{id}'> его редактировать </a>"
     return render_template('create_hall.html', title='Новый зал', form=form)
 
 
