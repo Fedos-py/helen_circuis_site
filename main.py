@@ -328,6 +328,7 @@ def afisha():
     print(data_events)
     dop_data = Hall.query.all()
     print(dop_data)
+    print(data_events[0].image)
     return render_template('afisha.html', data=data_events, dop_data=dop_data)
 
 @app.route('/map/<address>')
