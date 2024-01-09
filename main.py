@@ -490,7 +490,8 @@ def create_event():
         title = request.form['title']
         date = request.form['date']
         time = request.form['time']
-        event = Event(title=title, date=date, time=time, hall_id=0, active=0)
+        image = request.form['images']
+        event = Event(title=title, date=date, time=time, hall_id=0, active=0, image=image)
         db.session.add(event)
         db.session.commit()
         hall = Hall(title=hall_father.title, length=hall_father.length, width=hall_father.width, locality=hall_father.locality, location=hall_father.location, event_id=event.id)
@@ -509,7 +510,8 @@ def create_event():
         return f'<h1>Вы успешно создали мероприятие. Event id={id}</h1>'
     else:
         halls = HallTemplateList.query.filter_by().all()
-        return render_template('create_event.html', title='Новое мероприятие', form=form, halls=halls)
+        images = files = os.listdir(UPLOAD_FOLDER)
+        return render_template('create_event.html', title='Новое мероприятие', form=form, halls=halls, images=images)
 
 
 @app.route('/create_hall', methods=['GET', 'POST'])

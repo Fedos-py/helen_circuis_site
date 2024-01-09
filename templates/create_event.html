@@ -43,6 +43,13 @@
         {% endfor %}
   </select>
     Если нужного зала нет в списке, Вы можете <a href="/create_hall">создать новый зал</a>
+    <h3>Картинка Афиша</h3>
+    <select id="images" name="images">
+        {% for image in images %}
+        <option value="{{image}}">{{image}}</option>
+        {% endfor %}
+  </select>
+    Если нужной картинки нет в списке, Вы можете <a href="/upload">загрузить новую картинку</a>
     <p>{{ form.submit(type="submit", class="btn btn-primary") }}</p>
     </form>
 </body>
