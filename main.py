@@ -325,11 +325,13 @@ def basket():
 @app.route('/afisha')
 def afisha():
     data_events = Event.query.filter_by(active=1).all()
-    print(data_events)
-    dop_data = Hall.query.all()
-    print(dop_data)
-    print(data_events[0].image)
-    return render_template('afisha.html', data=data_events, dop_data=dop_data)
+    if len(data_events) == 0:
+        return '<center>В данный момент нет доступных мероприятий!<br><a href="/">Вернуться на главную страницу</a></center>'
+    else:
+        dop_data = Hall.query.all()
+        print(dop_data)
+        print(data_events[0].image)
+        return render_template('afisha.html', data=data_events, dop_data=dop_data)
 
 @app.route('/map/<address>')
 def map(address):
