@@ -7,6 +7,7 @@ import hashlib
 import requests
 import qrcode
 from werkzeug.utils import secure_filename
+from functools import wraps
 
 
 from flask_forms import *
@@ -39,6 +40,8 @@ class Event(db.Model):
     hall_id = db.Column(db.Integer)
     active = db.Column(db.Integer)
     image = db.Column(db.Text)
+    message = db.Column(db.Text)
+
 
 class Link(db.Model):
     __tablename__ = 'links'
@@ -223,6 +226,19 @@ def add_link(goto):
     link.qr = f'qr-link-{link.id}.png'
     db.session.commit()
 
+
+def admin_required(func):
+    @wraps(func)
+    def decorated_view(*args, **kwargs):
+        if isinstance(current_user, AnonymousUserMixin):
+            return f'Данная страница доступна только администраторам. <a href="/admin_auth">Авторизоваться</a>'
+        elif current_user.email == 'admin':
+            return func(*args, **kwargs)
+        else:
+            return f'Данная страница доступна только администраторам.'
+    return decorated_view
+
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -249,6 +265,7 @@ def about():
 
 
 @app.route('/events', methods=['POST', 'GET'])
+@admin_required
 def events():
     data_events = Event.query.all()
     halls = Hall.query.all()
@@ -280,20 +297,23 @@ def auth():
     print(request.args)
     if request.args.get('email'):
         email = request.args.get('email')
-        go_to_event_id = request.args.get('event_id')
-        print(email, go_to_event_id)
-        user = User.query.filter_by(email=email).first()
-        if user:
-            login_user(user)
-            print('success log in')
+        if email != 'admin':
+            go_to_event_id = request.args.get('event_id')
+            print(email, go_to_event_id)
+            user = User.query.filter_by(email=email).first()
+            if user:
+                login_user(user)
+                print('success log in')
+            else:
+                new_user = User(email=email)
+                db.session.add(new_user)
+                db.session.commit()
+                login_user(new_user)
+                print('success sign up')
+            my_road = f'/event/{go_to_event_id}/tickets'
+            return redirect(f'/event/{go_to_event_id}/tickets')
         else:
-            new_user = User(email=email)
-            db.session.add(new_user)
-            db.session.commit()
-            login_user(new_user)
-            print('success sign up')
-        my_road = f'/event/{go_to_event_id}/tickets'
-        return redirect(f'/event/{go_to_event_id}/tickets')
+            return redirect('admin_auth')
     else:
         go_to_event_id = request.args.get('event_id')
         return render_template('auth.html', go_to_event_id=go_to_event_id)
@@ -479,12 +499,25 @@ def tickets_old(id):
     else:
         return 'продажи на данное мероприятие в данный момент закрыты'
 
-@app.route('/event/<id>/tickets_new', methods=['GET', 'POST'])
-def tickets(id):
-    return 'biletov.net'
+@app.route('/admin_auth', methods=['GET', 'POST'])
+def admin_auth():
+    if isinstance(current_user, AnonymousUserMixin):
+        goto = request.args.get('goto')
+        if goto == None:
+            goto = 'index'
+        if request.args.get('password'):
+            password = request.args.get('password')
+            if password == admin_password:
+                user = User.query.filter_by(email='admin').first()
+                login_user(user)
+                return redirect(url_for(goto))
+        return render_template('admin_auth.html', goto=goto)
+    else:
+        return f'welcome, {current_user.email}'
 
 
 @app.route('/create_event', methods=['GET', 'POST'])
+@admin_required
 def create_event():
     form = CreateEventForm()
     if form.validate_on_submit():
@@ -519,6 +552,7 @@ def create_event():
 
 
 @app.route('/create_hall', methods=['GET', 'POST'])
+@admin_required
 def new_hall():
     form = CreateHallForm()
     if form.validate_on_submit():
@@ -543,6 +577,7 @@ def new_hall():
 
 
 @app.route('/edit_hall/<id>', methods=['GET', 'POST'])
+@admin_required
 def edit_hall(id):
     get_price = False
     if request.method == 'POST':
@@ -608,11 +643,13 @@ def link_redirect(id):
 
 
 @app.route('/links')
+@admin_required
 def links():
     data = Link.query.all()
     return render_template('links.html', data=data)
 
 @app.route('/create_link', methods=['GET', 'POST'])
+@admin_required
 def create_link():
     form = CreateLinkForm()
     if form.validate_on_submit():
@@ -627,6 +664,7 @@ def admin():
 
 
 @app.route('/upload', methods=['GET', 'POST'])
+@admin_required
 def upload():
     if request.method == 'POST':
         if 'file' not in request.files:
