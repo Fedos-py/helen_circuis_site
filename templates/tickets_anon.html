@@ -3,6 +3,7 @@
 {% block content %}
     <h1>Мероприятие {{event.title}}</h1>
     <h2>схема зала</h2>
+    <p style="color: red">{{event.message|safe}}</p>
     <table>
         <tbody>
         {% for row in data %}
