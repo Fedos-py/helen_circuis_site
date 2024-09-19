@@ -4,7 +4,7 @@
 <form method="post" novalidate>
     <h1>Мероприятие {{event.title}}</h1>
     <h2>схема зала</h2>
-    <p style="color: red">{{event.message|safe}}</p>
+    <p style="color: red">{{event.message}}</p>
     <table>
         <tbody>
         {% for row in data %}
