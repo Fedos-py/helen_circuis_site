@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<link rel="manifest" href="manifest.json">
+    <h1>Переходы на /afisha с парамаетром utm_source</h1>
+    <h3>Статистика переходов:</h3>
+    <table>
+    <thead>
+    <th>Ссылка</th><th>количество переходов</th>
+    </thead>
+      <tbody>
+      {% for el in data %}
+            <tr>
+                <td>{{el.name}}</td>
+                <td>{{el.count}}</td>
+            </tr>
+
+      {% endfor %}
+      </tbody>
+    </table>
+{% endblock %}

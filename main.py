@@ -673,6 +673,14 @@ def links():
     data = Link.query.all()
     return render_template('links.html', data=data)
 
+
+@app.route('/utm_stats')
+@admin_required
+def utm_stats():
+    data = Sources_utm.query.all()
+    return render_template('utm_stats.html', data=data)
+
+
 @app.route('/create_link', methods=['GET', 'POST'])
 @admin_required
 def create_link():
