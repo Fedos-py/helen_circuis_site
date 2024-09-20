@@ -90,7 +90,7 @@ class Event(Base):
     date = Column(String(250), nullable=False)
     time = Column(String(250), nullable=False)
     hall_id = Column(Integer, nullable=False)
-"""
+
 class Hall(Base):
     __tablename__ = 'halls'
 
@@ -110,6 +110,15 @@ class HallPlaces(Base):
     status = Column(String(250), nullable=False)
     reserver = Column(String(250), nullable=False)
     price = Column(Integer, nullable=False)
+
+"""
+
+class HallPlaces(Base):
+    __tablename__ = 'utm_sources'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(250), nullable=False)
+    count = Column(Integer, nullable=False)
 
 
 engine = create_engine('sqlite:///db/events.db')

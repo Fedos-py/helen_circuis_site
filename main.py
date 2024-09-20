@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import AnonymousUserMixin, UserMixin, LoginManager, login_user, current_user, logout_user, login_required
 import os
@@ -109,6 +109,13 @@ class Order(db.Model):
     event_id = db.Column(db.Integer)
     places = db.Column(db.Text)
 
+class Sources_utm(db.Model):
+    __tablename__ = 'utm_sources'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.Text)
+    count = db.Column(db.Integer)
+
 
 class User(UserMixin, db.Model):
     __tablename__ = 'users'
@@ -194,9 +201,8 @@ def get_data_of_current_user():
 
 def get_token(request):
     t = []
-
     for key, value in request.items():
-        if key == "TerminalKey" or key == "Amount" or key == "OrderId" or key == "Password" or key == "PaymentId":
+        if key == "TerminalKey" or key == "Amount" or key == "OrderId" or key == "Password" or key == "PaymentId" or key == "Description":
             t.append({key: value})
     t = sorted(t, key=lambda x: list(x.keys())[0])
     t = "".join(str(value) for item in t for value in item.values())
@@ -342,8 +348,27 @@ def basket():
     data = get_data_of_current_user()
     return render_template('basket.html', data=data)
 
-@app.route('/afisha')
+
+@app.route('/clear_session')
+def clear_session():
+    session.clear()
+    return 'Session successfully cleared'
+
+
+@app.route('/afisha', methods=['GET'])
 def afisha():
+    if 'utm_processed' not in session:
+        session['utm_processed'] = False
+    if len(list(request.args)) > 0 and 'utm_source' in request.args.keys() and not session['utm_processed']:
+        if len(Sources_utm.query.filter_by(name=request.args['utm_source']).all()) == 0:
+            new_source = Sources_utm(name=request.args['utm_source'], count=1)
+            db.session.add(new_source)
+            db.session.commit()
+        else:
+            source = Sources_utm.query.filter_by(name=request.args['utm_source']).all()[0]
+            source.count += 1
+            db.session.commit()
+        session['utm_processed'] = True
     data_events = Event.query.filter_by(active=1).all()
     if len(data_events) == 0:
         return '<center>В данный момент нет доступных мероприятий!<br><a href="/">Вернуться на главную страницу</a></center>'
@@ -359,54 +384,59 @@ def map(address):
 
 @app.route('/payment')
 def payment():
-    data = get_data_of_current_user()
-    amount = 0
-    places = ''
-    Items_FFD_12 = []
-    for el in data:
-        amount += el[-1]
-        places += f'{el[1]}_{el[2]} '
-        Items_FFD_12.append({
-            "Name": f'Билет на мероприятие. Ряд: {el[1]}. Место:{el[2]}.',
-            "Price": el[-1] * 100,
-            "Quantity": 1,
-            "Amount": el[-1] * 100,
-            "Tax": "vat20",
-            "PaymentMethod": "full_prepayment",
-            "PaymentObject": "service",
-            "MeasurementUnit": "HUR"
-        })
-    id = int(data[0][-2])
-    amount = amount * 100
-    order = Order(amount=amount, status="new", reserver=current_user.email, event_id=id, places=places)
-    db.session.add(order)
-    db.session.commit()
-    oid = Order.query.filter_by(amount=amount, status="new", reserver=current_user.email, event_id=id, places=places).all()[0].id
-    print(oid)
-    r = {
-        "TerminalKey": tinkoff_terminalkey,
-        "Amount": amount,
-        "OrderId": oid,
-        "Password": tinkoff_password,
-        "Description": f"Оплата билетов. {data[0][0]}",
-        "Receipt": {
-            "FfdVersion": "1.2",
-            "Taxation": "osn",
-            "Email": current_user.email,
-            "Items": Items_FFD_12
+    try:
+        data = get_data_of_current_user()
+        amount = 0
+        places = ''
+        Items_FFD_12 = []
+        for el in data:
+            amount += el[-1]
+            places += f'{el[1]}_{el[2]} '
+            Items_FFD_12.append({
+                "Name": f'Билет на мероприятие. Ряд: {el[1]}. Место:{el[2]}.',
+                "Price": el[-1] * 100,
+                "Quantity": 1,
+                "Amount": el[-1] * 100,
+                "Tax": "vat20",
+                "PaymentMethod": "full_prepayment",
+                "PaymentObject": "service",
+                "MeasurementUnit": "HUR"
+            })
+        id = int(data[0][-2])
+        amount = amount * 100
+        order = Order(amount=amount, status="new", reserver=current_user.email, event_id=id, places=places)
+        db.session.add(order)
+        db.session.commit()
+        oid = Order.query.filter_by(amount=amount, status="new", reserver=current_user.email, event_id=id,
+                                    places=places).all()[-1].id
+        print(oid)
+        r = {
+            "TerminalKey": tinkoff_terminalkey,
+            "Amount": amount,
+            "OrderId": oid,
+            "Password": tinkoff_password,
+            "Description": f"Оплата билетов. {data[0][0]}",
+            "Receipt": {
+                "FfdVersion": "1.2",
+                "Taxation": "osn",
+                "Email": current_user.email,
+                "Items": Items_FFD_12
+            }
         }
-    }
 
-    t = get_token(r)
-    r["Token"] = t
-    print(r)
-    response = requests.post(payments_url, headers={'Content-Type': 'application/json'}, json=r)
-    print(response)
-    print(response.json())
-    user = User().query.filter_by(email=current_user.email).all()[0]
-    user.current_payment = response.json()['PaymentId']
-    db.session.commit()
-    return redirect(response.json()['PaymentURL'])
+        t = get_token(r)
+        r["Token"] = t
+        print(r)
+        response = requests.post(payments_url, headers={'Content-Type': 'application/json'}, json=r)
+        print(response)
+        print(response.json())
+        user = User().query.filter_by(email=current_user.email).all()[0]
+        user.current_payment = response.json()['PaymentId']
+        db.session.commit()
+        return redirect(response.json()['PaymentURL'])
+    except Exception as e:
+        print(e)
+        return f'Ошибка ({e})'
 
 
 @app.route('/success_redirect/', methods=['GET'])
@@ -481,10 +511,8 @@ def tickets_old(id):
         else:
             if request.method == 'POST':
                 button_value = request.form['button']
-                print(f'Нажата кнопка с значением {button_value}')
                 id = Event.query.filter_by(id=id).all()[0].hall_id
                 get_place = HallPlaces.query.filter_by(hall_id=id, place=button_value).all()[0]
-                print(get_place)
                 if get_place.reserver == current_user.email:
                     get_place.reserver = ' '
                     get_place.status = 'available'
@@ -494,7 +522,6 @@ def tickets_old(id):
                 db.session.commit()
             data, hall = get_event_data(id, current_user.email)
             basket = get_basket_data(id, current_user.email)
-            print(basket)
             return render_template('tickets.html', data=hall, event=data, user=current_user.email, basket=basket)
     else:
         return 'продажи на данное мероприятие в данный момент закрыты'
@@ -586,7 +613,7 @@ def edit_hall(id):
             print("ОГОГО")
             button_value = request.form['button']
             print(f'Нажата кнопка с значением {button_value}')
-            get_place = HallTemplatePlace.query.filter_by(hall_id=id, place=button_value).all()[0]
+            get_place = HallPlaces.query.filter_by(hall_id=id, place=button_value).all()[0]
             if get_place.status == 'deleted':
                 get_place.status = 'available'
             else:
@@ -595,15 +622,13 @@ def edit_hall(id):
         elif "button_save" in request.form.keys():
             for key in request.form.keys():
                 if key != "button_save":
-                    get_places = HallTemplatePlace.query.filter_by(hall_id=id).all()
+                    get_places = HallPlaces.query.filter_by(hall_id=id).all()
                     for el in get_places:
                         if el.place.split('_')[1] == key:
                             el.price = request.form[key]
             db.session.commit()
-
-    template_data = HallTemplateList.query.filter_by(id=id).all()[0]
-    data = HallTemplatePlace.query.filter_by(hall_id=id).all()
-    print(data)
+    template_data = Hall.query.filter_by(id=id).all()[0]
+    data = HallPlaces.query.filter_by(hall_id=id).all()
     places = []
     hall_width = int(template_data.width)
     hall_length = int(template_data.length)
@@ -663,6 +688,127 @@ def admin():
     return render_template('admin.html')
 
 
+@app.route('/get_guest_list/<id>')
+def get_guest_list(id):
+    success_payed = [232, 231, 229, 206, 227, 225, 223, 222, 221, 220, 219, 217, 215, 213, 211, 210, 208, 207, 205, 201, 200, 198, 196, 194, 192, 191, 190, 189, 188, 185, 157, 149, 148, 147, 146, 145, 144, 143, 139, 141, 140, 138, 137, 136, 135, 134, 133, 132, 131, 130, 129, 127, 126, 125, 123, 122, 121, 120, 119, 118, 116, 114, 113, 111, 110, 109]
+    data = HallPlaces.query.filter_by(hall_id=id).all()
+    print(data)
+    guests = ['<table>']
+    for el in data:
+        if el.status != 'available' and el.status != 'deleted':
+            place = el.place.split('_')
+            order_data = Order.query.filter_by(reserver=el.reserver, event_id=el.event_id).all()
+            order = []
+            payds = []
+            for o in order_data:
+                order.append([o.id, o.places])
+                if o.id in success_payed:
+                    payds.append(True)
+                else:
+                    payds.append(False)
+            guests.append(f'<tr><td>Заказ №{order}</td><td>Ряд {place[1]}</td><td>Место {place[2]}</td><td>{el.reserver}</td><td>{el.status}</td><td>{payds}</td></tr>')
+    guests.append('</table>')
+    print(guests)
+    return ''.join(guests)
+
+
+@app.route('/notificate_booking/<id>')
+@admin_required
+def notificate_booking(id):
+    persons = HallPlaces.query.filter_by(event_id=id, status='reserved').all()
+    emails = list(set([person.reserver for person in persons]))
+    for el in emails:
+        print(el)
+    message = 'Здравствуйте!\nВы забронировали билеты на представление на нашем сайте teatr-gamma.ru.\nПросим Вас оплатить бронь, при отсутствии оплаты за сутки до мероприятия - Ваша бронь будет аннулирована.\nЖдём Вас на нашем мероприятии :)'
+    for el in emails:
+        send_email(el, message)
+    return f'Вы собираетесь разослать письмо всем, кто забронировал билеты на мероприятие с id={id}, а именно: {emails}\nКакой текст вы хотите им отправить?\n<textarea id="message" name="message" rows="4" cols="50">Введите сообщение</textarea>'
+
+
+
+@app.route('/check_payment', methods=['POST', 'GET'])
+@login_required
+def check_payment():
+    if request.method == 'POST':
+        user = User.query.filter_by(email=current_user.email).all()[0]
+        r = {
+            "TerminalKey": tinkoff_terminalkey,
+            "Password": tinkoff_password,
+            "PaymentId": user.current_payment
+        }
+
+        t = get_token(r)
+        r["Token"] = t
+        print(r)
+        response = requests.post('https://securepay.tinkoff.ru/v2/GetState',
+                                 headers={'Content-Type': 'application/json'}, json=r)
+        print(response.json())
+        if response.json()['Success']:
+            status = response.json()['Status']
+        else:
+            return 'У Вас нет текущих платежей'
+        if status == 'CONFIRMED':
+            order = Order.query.filter_by(reserver=current_user.email).all()[-1]
+            tickets = order.places.split(' ')[:-1]
+            places = []
+            for elem in tickets:
+                ticket = HallPlaces.query.filter_by(reserver=current_user.email, event_id=order.event_id,
+                                                    place=f'n_{elem}').all()[0]
+                ticket.status = 'busy'
+            user.current_payment = 0
+            order.status = 'success'
+            db.session.commit()
+            return f'Проверили Ваш платёж. Заказ №{order.id} оплачен.<br>Пометили оплаченные места, как "занятые".'
+        else:
+            return f'Заказ не оплачен, статус: {status}'
+    return render_template('check_payment.html')
+
+
+@app.route('/check_payments/<id>', methods=['POST', 'GET'])
+@login_required
+def check_payments(id):
+    if request.method == 'POST':
+        places = HallPlaces.query.filter_by(event_id=id, status='reserved').all()
+        print(places)
+        data = []
+        for place in places:
+            print(place)
+            print(True)
+            user = User.query.filter_by(email=place.reserver).all()[0]
+            print(user)
+            if user.current_payment == None or user.current_payment == 0:
+                pass
+            else:
+                r = {
+                    "TerminalKey": tinkoff_terminalkey,
+                    "Password": tinkoff_password,
+                    "PaymentId": user.current_payment
+                }
+
+                t = get_token(r)
+                r["Token"] = t
+                print(r)
+                response = requests.post('https://securepay.tinkoff.ru/v2/GetState',
+                                         headers={'Content-Type': 'application/json'}, json=r)
+                print(response.json())
+                if response.json()['Success']:
+                    status = response.json()['Status']
+                else:
+                    status = 'нет текущего платежа'
+                if status == 'CONFIRMED':
+                    order = Order.query.filter_by(reserver=current_user.email).all()[-1]
+                    tickets = order.places.split(' ')[:-1]
+                    places = []
+                    for elem in tickets:
+                        ticket = HallPlaces.query.filter_by(reserver=current_user.email, event_id=order.event_id,
+                                                            place=f'n_{elem}').all()[0]
+                        ticket.status = 'busy'
+                    user.current_payment = 0
+                    order.status = 'success'
+                    db.session.commit()
+                    data.append(user.email)
+        return f'Проверили платежи.<br>Пометили оплаченные места, как "занятые".<br>data={data}'
+    return render_template('check_payment.html')
 @app.route('/upload', methods=['GET', 'POST'])
 @admin_required
 def upload():
