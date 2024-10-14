@@ -41,6 +41,7 @@ class Event(db.Model):
     active = db.Column(db.Integer)
     image = db.Column(db.Text)
     message = db.Column(db.Text)
+    sales_open = db.Column(db.Integer)
 
 
 class Link(db.Model):
@@ -504,7 +505,7 @@ def button_handler():
 @app.route('/event/<id>/tickets', methods=['GET', 'POST'])
 def tickets_old(id):
     event = Event.query.filter_by(id=id).all()[0]
-    if event.active == 1:
+    if event.active == 1 and event.sales_open == 1:
         if isinstance(current_user, AnonymousUserMixin):
             data, hall = get_event_data(id)
             return render_template('tickets_anon.html', data=hall, event=data)
@@ -523,6 +524,9 @@ def tickets_old(id):
             data, hall = get_event_data(id, current_user.email)
             basket = get_basket_data(id, current_user.email)
             return render_template('tickets.html', data=hall, event=data, user=current_user.email, basket=basket)
+    elif event.sales_open == 0:
+        data, hall = get_event_data(id)
+        return render_template('tickets_sales_closed.html', data=hall, event=data)
     else:
         return 'продажи на данное мероприятие в данный момент закрыты'
 
