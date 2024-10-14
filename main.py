@@ -739,6 +739,39 @@ def notificate_booking(id):
     return f'Вы собираетесь разослать письмо всем, кто забронировал билеты на мероприятие с id={id}, а именно: {emails}\nКакой текст вы хотите им отправить?\n<textarea id="message" name="message" rows="4" cols="50">Введите сообщение</textarea>'
 
 
+@app.route('/rassilka/<id>')
+@admin_required
+def rassilka(id):
+    users = User.query.all()
+    print(users)
+    cusers = []
+    message = 'Здравствуйте!\nВы интересовались билетами на Цирковое представление - ЦИРК 12.10.2024(суббота) в Красном Селе на нашем сайте teatr-gamma.ru. \nВыберите и оплатите билеты до 23:59 11.10.2024.\nПосле данного времени онлайн продажа будет закрыта.\nВы также можете приобрести билеты за час до начала представления в порядке живой очереди в концертном зале, но количество билетов ограничено!\n Ждём Вас на нашем мероприятии :) Красное Село, пр. Ленина д. 77А, 12.10.2024 в 17:00'
+    for u in users:
+        if u.id >= 250 and u.current_payment != 0:
+            orders = Order.query.filter_by(reserver=u.email).all()
+            print(orders)
+            buyed = False
+            for o in orders:
+                if o.status == 'success':
+                    buyed = True
+            if not buyed:
+                # send_email(u.email, message)
+                print('no send')
+                cusers.append(u.email)
+    return f'sended for {cusers}'
+
+@app.route('/add_place/<event_id>/<row_number>/<col_start>/<col_count>/<price>')
+@admin_required
+def add_place(event_id, row_number, col_start, col_count, price):
+    places = HallPlaces.query.filter_by(event_id=event_id).all()
+    for i in range(int(col_count)):
+        place = HallPlaces(hall_id=event_id, place=f'n_{row_number}_{int(col_start) + i}', status='available', reserver='', price=price, event_id=event_id)
+        db.session.add(place)
+        db.session.commit()
+
+    return 'success added!'
+
+
 
 @app.route('/check_payment', methods=['POST', 'GET'])
 @login_required
