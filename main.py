@@ -704,26 +704,25 @@ def admin():
 
 
 @app.route('/get_guest_list/<id>')
+@admin_required
 def get_guest_list(id):
     data = HallPlaces.query.filter_by(hall_id=id).all()
-    print(data)
-    guests = ['<table>']
-    for el in data:
-        if el.status != 'available' and el.status != 'deleted':
-            place = el.place.split('_')
-            order_data = Order.query.filter_by(reserver=el.reserver, event_id=el.event_id).all()
-            order = []
-            payds = []
-            for o in order_data:
-                order.append([o.id, o.places])
-                if o.id in success_payed:
-                    payds.append(True)
-                else:
-                    payds.append(False)
-            guests.append(f'<tr><td>Заказ №{order}</td><td>Ряд {place[1]}</td><td>Место {place[2]}</td><td>{el.reserver}</td><td>{el.status}</td><td>{payds}</td></tr>')
-    guests.append('</table>')
-    print(guests)
-    return ''.join(guests)
+    payed = ['<thead><td>Ряд</td><td>Место</td><td>Клиент</td>']
+    booked = ['<thead><td>Ряд</td><td>Место</td><td>Клиент</td>']
+    free = ['<thead><td>Ряд</td><td>Место</td><td>Клиент</td>']
+    for place in data:
+        if place.status == 'available':
+            free.append(f'<tr><td>{"</td><td>".join(place.place.split("_")[1:])}</td><td>{place.reserver}</td></tr>')
+            print(place.reserver)
+        elif place.status == 'busy':
+            payed.append(f'<tr><td>{"</td><td>".join(place.place.split("_")[1:])}</td><td>{place.reserver}</td></tr>')
+        elif place.status == 'reserved':
+            booked.append(f'<tr><td>{"</td><td>".join(place.place.split("_")[1:])}</td><td>{place.reserver}</td></tr>')
+    ed = Event.query.filter_by(hall_id=id).all()[0] # Event data
+    print(free)
+    print(payed)
+    print(booked)
+    return f'<h1>Список билетов на мероприятие {ed.title} ({ed.date} в {ed.time}).</h1><h2>Свободные места:</h2><table border=1>{"".join(free)}</table><h2>Забронированные места:</h2><table border=1>{"".join(booked)}</table><h2>Проданные места:</h2><table border=1>{"".join(payed)}</table>'
 
 
 @app.route('/notificate_booking/<id>')
@@ -733,7 +732,8 @@ def notificate_booking(id):
     emails = list(set([person.reserver for person in persons]))
     for el in emails:
         print(el)
-    message = 'Здравствуйте!\nВы забронировали билеты на представление на нашем сайте teatr-gamma.ru.\nПросим Вас оплатить бронь, при отсутствии оплаты за сутки до мероприятия - Ваша бронь будет аннулирована.\nЖдём Вас на нашем мероприятии :)'
+    # message = 'Здравствуйте!\nПродажа билетов онлайн на завтрашнее Цирковое представление закрывается сегодня.\nВы забронировали билеты на представление на нашем сайте teatr-gamma.ru.\nПросим Вас оплатить бронь, при отсутствии оплаты до 23:59 28.09.2024 - Ваша бронь будет аннулирована.\nЖдём Вас на нашем мероприятии :)'
+    message = 'Здравствуйте!\nВы забронировали билеты на представление на нашем сайте teatr-gamma.ru.\nВ связи с высоким спросом, просим Вас оплатить бронь, при отсутствии оплаты до 22:30 11.10.2024 - Ваша бронь будет аннулирована. Онлайн-продажа билетов будет закрыта 11.10.2024 в 23:59.\nЖдём Вас на нашем мероприятии :)'
     for el in emails:
         send_email(el, message)
     return f'Вы собираетесь разослать письмо всем, кто забронировал билеты на мероприятие с id={id}, а именно: {emails}\nКакой текст вы хотите им отправить?\n<textarea id="message" name="message" rows="4" cols="50">Введите сообщение</textarea>'
