@@ -155,7 +155,7 @@ def get_event_data(id, c_user=' '):
         elif el.status == 'deleted':
             places.append([el.place.split('_')[1:], [' ', ' '], ['deleted', el.price]])
         else:
-            places.append([el.place.split('_')[1:], ['background-color: yellow', 'disabled'], el.price])
+            places.append([el.place.split('_')[1:], ['background-color: yellow', 'disabled'], ['visible', el.price]])
     hall = []
     for i in range(hall_length):
         hall.append(places[i * hall_width:(i + 1) * hall_width])
