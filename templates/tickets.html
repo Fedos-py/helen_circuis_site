@@ -2,7 +2,7 @@
 
 {% block content %}
 <form method="post" novalidate>
-    <h1>Мероприятие {{event.title}}</h1>
+    <h1>Мероприятие {{event.title}} {{event.date}} в {{event.time}}</h1>
     <h2>схема зала</h2>
     <p style="color: red">{{event.message}}</p>
     <table>
