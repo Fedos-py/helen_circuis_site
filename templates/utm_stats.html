@@ -6,13 +6,14 @@
     <h3>Статистика переходов:</h3>
     <table>
     <thead>
-    <th>Ссылка</th><th>количество переходов</th>
+    <th>Ссылка</th><th>количество переходов</th><th>QR-код</th>
     </thead>
       <tbody>
       {% for el in data %}
             <tr>
                 <td>{{el.name}}</td>
                 <td>{{el.count}}</td>
+                <td><a href="https://teatr-gamma.ru/static/img/utm-{{el.name}}.png">QR-код</a></td>
             </tr>
 
       {% endfor %}

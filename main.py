@@ -363,6 +363,8 @@ def afisha():
     if len(list(request.args)) > 0 and 'utm_source' in request.args.keys() and not session['utm_processed']:
         if len(Sources_utm.query.filter_by(name=request.args['utm_source']).all()) == 0:
             new_source = Sources_utm(name=request.args['utm_source'], count=1)
+            create_qr(f"https://teatr-gamma.ru/afisha?utm_source={request.args['utm_source']}", f"utm-{request.args['utm_source']}.png")
+            print('new_source', new_source)
             db.session.add(new_source)
             db.session.commit()
         else:
@@ -702,7 +704,6 @@ def admin():
 
 @app.route('/get_guest_list/<id>')
 def get_guest_list(id):
-    success_payed = [232, 231, 229, 206, 227, 225, 223, 222, 221, 220, 219, 217, 215, 213, 211, 210, 208, 207, 205, 201, 200, 198, 196, 194, 192, 191, 190, 189, 188, 185, 157, 149, 148, 147, 146, 145, 144, 143, 139, 141, 140, 138, 137, 136, 135, 134, 133, 132, 131, 130, 129, 127, 126, 125, 123, 122, 121, 120, 119, 118, 116, 114, 113, 111, 110, 109]
     data = HallPlaces.query.filter_by(hall_id=id).all()
     print(data)
     guests = ['<table>']
