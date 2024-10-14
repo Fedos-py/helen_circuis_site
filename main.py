@@ -143,8 +143,9 @@ def get_event_data(id, c_user=' '):
     hall_length = int(hall.length)
     hall_width = int(hall.width)
     data_places = HallPlaces.query.filter_by(hall_id=data.hall_id).all()
+    sorted_places = sorted(data_places, key=lambda el: (int(el.place.split('_')[1]), int(el.place.split('_')[2])))
     places = []
-    for el in data_places:
+    for el in sorted_places:
         if el.status == 'available':
             places.append([el.place.split('_')[1:], [' ', ' '], ['visible', el.price]])
         elif el.status == 'reserved' and el.reserver == c_user:
