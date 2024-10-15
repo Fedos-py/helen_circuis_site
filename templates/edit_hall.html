@@ -2,7 +2,7 @@
 
 {% block content %}
 <form method="post">
-    <h1>Зал {{name}}: редактирование</h1>
+    <h1>Зал {{hall_data.title}}: редактирование</h1>
     <table>
         <tbody>
         {% for row in data %}
@@ -15,7 +15,7 @@
         {% endfor %}
         </tbody>
     </table>
-    <button name="button_save">Сохранить стоимость</button>
+    <button type="submit" name="button_save">Сохранить стоимость</button>
 <br>
     Условные обозначения:
     <table>
@@ -24,5 +24,28 @@
         <tr><td><button name="example" disabled>Х</button> </td><td>место доступно</td>
         </tbody>
     </table>
-    </form>
+    Доступные действия:<br>
+
+    <!-- Добавить пустой столбец (проход) -->
+    <button type="button" name="add_empty_col"
+        onclick="
+            var colNum = prompt('Перед каким столбцом Вы хотите добавить пустой столбец? (Введите номер)');
+            if (colNum) {
+                window.location.replace('/add_col?hall_id={{hall_data.id}}&col_num=' + encodeURIComponent(colNum));
+            }
+        ">
+        Добавить пустой столбец (проход)
+    </button><br>
+
+    <!-- Добавить пустой ряд -->
+    <button type="button" name="add_empty_row"
+        onclick="
+            var rowNum = prompt('Перед каким рядом Вы хотите добавить пустой ряд? (Введите номер)');
+            if (rowNum) {
+                window.location.replace('/add_row?row_num=' + encodeURIComponent(rowNum));
+            }
+        ">
+        Добавить пустой ряд
+    </button><br>
+</form>
 {% endblock %}
