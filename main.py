@@ -562,7 +562,7 @@ def create_event():
         date = request.form['date']
         time = request.form['time']
         image = request.form['images']
-        event = Event(title=title, date=date, time=time, hall_id=0, active=0, image=image)
+        event = Event(title=title, date=date, time=time, hall_id=0, active=0, image=image, message='', sales_open=1)
         db.session.add(event)
         db.session.commit()
         hall = Hall(title=hall_father.title, length=hall_father.length, width=hall_father.width, locality=hall_father.locality, location=hall_father.location, event_id=event.id)
@@ -652,8 +652,20 @@ def edit_hall(id):
         hall.append(places[i * hall_width:(i + 1) * hall_width])
     print(hall)
 
-    return render_template('edit_hall.html', title='Новый зал', name=template_data.title, data=hall)
+    return render_template('edit_hall.html', title='Новый зал', hall_data=template_data, data=hall)
 
+
+@app.route('/add_col')
+def add_col():
+    col_num = int(request.args.get('col_num'))
+    hall_id = int(request.args.get('hall_id'))
+    hall_data = Hall.query.filter_by(id=hall_id).all()[0]
+    for i in range(int(hall_data.length)):
+        place = HallPlaces(hall_id=hall_id, place=f'n_{i + 1}_{col_num - 1}_0', status='available', reserver=' ', price=0, event_id=hall_id)
+        db.session.add(place)
+    hall_data.width += 1
+    db.session.commit()
+    return f'Добавили столбец перед {col_num} в зале {hall_id}'
 
 @app.route('/fail_redirect/', methods=['GET'])
 def fail_redirect():

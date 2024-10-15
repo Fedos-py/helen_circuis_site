@@ -9,7 +9,9 @@
         {% for row in data %}
             <tr><td>ряд {{row[0][0][0]}} (цена - {{row[0][-1][-1]}}₽)</td>
             {% for place in row %}
-                {% if place[-1][0] != "deleted" %}
+                {% if place[0][2] == "0" %}
+                    <td><button name="button" style="visibility: hidden" value="there is empty space"></button></td>
+                {% elif place[-1][0] != "deleted" %}
                     <td><button name="button" style="{{place[1][0]}}" value="n_{{place[0][0]}}_{{place[0][1]}}" {{place[1][1]}} onclick="confirm('{{event.message}}')">{{place[0][1]}}</button></td>
                 {% else %}
                     <td><button name="button" style="visibility: hidden" value="there is no place"></button></td>
